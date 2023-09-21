@@ -59,14 +59,15 @@ defmodule Emaid do
 
   @neg_p2_minus_15 {0, 2, 2, 1}
 
-  @spec calculate(binary() | charlist()) :: binary()
-  def calculate(contract_id) when is_binary(contract_id),
-    do: contract_id |> to_charlist() |> calculate()
+  @spec calculate_checksum(binary() | charlist()) :: {:ok, binary()} | {:error, binary()}
+  def calculate_checksum(contract_id) when is_binary(contract_id),
+    do: contract_id |> to_charlist() |> calculate_checksum()
 
-  def calculate(contract_id) when is_list(contract_id) and length(contract_id) != length(@p1s),
-    do: {:error, "invalid contract_id length"}
+  def calculate_checksum(contract_id)
+      when is_list(contract_id) and length(contract_id) != 14,
+      do: {:error, "invalid contract_id length"}
 
-  def calculate(contract_id) when is_list(contract_id) do
+  def calculate_checksum(contract_id) when is_list(contract_id) do
     {{v11, v12}, v2} =
       [contract_id, @p1s, @p2s]
       |> Enum.zip_reduce({{0, 0}, {0, 0}}, fn [char, p1, p2], {p1_acc, p2_acc} ->
@@ -88,6 +89,28 @@ defmodule Emaid do
     m15 = {band(v11, 1), band(v12, 1), rem(v21, 3), rem(v22, 3)}
 
     # Decode Matrix and convert it to string
-    [@decoding[m15]] |> to_string()
+    case @decoding[m15] do
+      nil -> raise "invalid checksum calculation"
+      value -> {:ok, to_string([value])}
+    end
+  end
+
+  def new(contract_id) do
+    case calculate_checksum(contract_id) do
+      {:ok, checksum} ->
+        contract_id <> checksum
+      {:error, reason} ->
+        raise "Failed to calculate checksum: #{inspect(reason)}"
+    end
+  end
+
+  def valid?(emaid) do
+    {contract_id, checksum} = String.split_at(emaid, 14)
+    case calculate_checksum(contract_id) do
+      {:ok, calculated} ->
+        checksum == calculated
+      {:error, _reason} ->
+        false
+    end
   end
 end

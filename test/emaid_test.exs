@@ -15,7 +15,8 @@ defmodule EmaidTest do
     }
 
     for {contract_id, expected_checksum} <- tests do
-      assert expected_checksum == Emaid.calculate(contract_id)
+      assert {:ok, expected_checksum} == Emaid.calculate_checksum(contract_id)
+      assert Emaid.valid?(contract_id <> expected_checksum)
     end
   end
 end
