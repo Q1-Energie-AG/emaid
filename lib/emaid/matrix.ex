@@ -1,5 +1,6 @@
 defmodule Emaid.Matrix do
-  import Bitwise
+  import Bitwise, only: [band: 2, bsl: 2, bsr: 2]
+
   @type matrix() :: {integer(), integer(), integer(), integer()}
 
   @spec mult(matrix(), matrix()) :: matrix()
@@ -13,8 +14,14 @@ defmodule Emaid.Matrix do
   end
 
   @spec decode(integer()) :: matrix()
-  def decode(x), do: {band(x, 1), band(x >>> 1, 1), band(x >>> 2, 3), x >>> 4}
+  def decode(x),
+    do: {
+      band(x, 1),
+      x |> bsr(1) |> band(1),
+      x |> bsr(2) |> band(3),
+      bsr(x, 4)
+    }
 
   @spec encode(matrix()) :: integer()
-  def encode({m11, m12, m21, m22}), do: m11 + (m12 <<< 1) + (m21 <<< 2) + (m22 <<< 4)
+  def encode({m11, m12, m21, m22}), do: m11 + bsl(m12, 1) + bsl(m21, 2) + bsl(m22, 4)
 end
