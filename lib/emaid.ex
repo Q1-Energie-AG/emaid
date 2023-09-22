@@ -7,6 +7,8 @@ defmodule Emaid do
 
   alias Emaid.{Matrix, Vector}
 
+  @type emaid_format :: :plain | :star | :dash
+
   @encoding %{
               ?0 => 0,
               ?1 => 16,
@@ -61,7 +63,7 @@ defmodule Emaid do
 
   @spec calculate_checksum(binary() | charlist()) :: {:ok, binary()} | {:error, binary()}
   def calculate_checksum(contract_id) when is_binary(contract_id),
-    do: contract_id |> to_charlist() |> calculate_checksum()
+    do: contract_id |> normalize_emaid() |> to_charlist() |> calculate_checksum()
 
   def calculate_checksum(contract_id)
       when is_list(contract_id) and length(contract_id) != 14,
@@ -95,22 +97,53 @@ defmodule Emaid do
     end
   end
 
-  def new(contract_id) do
+  @spec new(binary(), emaid_format()) :: binary()
+  def new(contract_id, format \\ :plain)
+
+  def new(contract_id, format) do
+    contract_id = normalize_emaid(contract_id)
+
     case calculate_checksum(contract_id) do
       {:ok, checksum} ->
-        contract_id <> checksum
+        format(contract_id <> checksum, format)
+
       {:error, reason} ->
-        raise "Failed to calculate checksum: #{inspect(reason)}"
+        {:error, reason}
     end
   end
 
   def valid?(emaid) do
-    {contract_id, checksum} = String.split_at(emaid, 14)
+    {contract_id, checksum} =
+      emaid
+      |> normalize_emaid()
+      |> String.split_at(14)
+
     case calculate_checksum(contract_id) do
       {:ok, calculated} ->
         checksum == calculated
+
       {:error, _reason} ->
         false
     end
+  end
+
+  defp format(emaid, :plain), do: emaid
+
+  defp format(emaid, spacer) when spacer in [:star, :dash] do
+    {c, rest} = emaid |> String.split_at(2)
+    {pid, rest} = rest |> String.split_at(3)
+
+    s =
+      case spacer do
+        :star -> "*"
+        :dash -> "-"
+      end
+
+    "#{c}#{s}#{pid}#{s}#{rest}"
+  end
+
+  defp normalize_emaid(emaid) do
+    emaid
+    |> String.replace(["*", "-"], "")
   end
 end
