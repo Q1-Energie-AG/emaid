@@ -97,7 +97,7 @@ defmodule Emaid do
     end
   end
 
-  @spec new(binary(), emaid_format()) :: binary()
+  @spec new(binary(), emaid_format()) :: {:ok, binary()} | {:error, binary()}
   def new(contract_id, format \\ :plain)
 
   def new(contract_id, format) do
@@ -105,7 +105,7 @@ defmodule Emaid do
 
     case calculate_checksum(contract_id) do
       {:ok, checksum} ->
-        format(contract_id <> checksum, format)
+        {:ok, format!(contract_id <> checksum, format)}
 
       {:error, reason} ->
         {:error, reason}
@@ -127,9 +127,9 @@ defmodule Emaid do
     end
   end
 
-  defp format(emaid, :plain), do: emaid
+  defp format!(emaid, :plain), do: emaid
 
-  defp format(emaid, spacer) when spacer in [:star, :dash] do
+  defp format!(emaid, spacer) when spacer in [:star, :dash] do
     {c, rest} = emaid |> String.split_at(2)
     {pid, rest} = rest |> String.split_at(3)
 

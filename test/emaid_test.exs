@@ -25,7 +25,7 @@ defmodule EmaidTest do
           true -> :plain
         end
 
-      assert Emaid.new(contract_id, format) == contract_id <> expected_checksum
+      assert Emaid.new(contract_id, format) == {:ok, contract_id <> expected_checksum}
     end
   end
 end
